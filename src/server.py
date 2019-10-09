@@ -52,7 +52,8 @@ class Handler(LineOnlyReceiver):
         if self.login is not None:
             # формируем сообщение для пересылки другим клиентам
             message = f"<{self.login}>: {message}"
-
+            #история сообщений
+            self.factory.stock.append(message)
             # циклически отправляем остальным клиентам (кроме текущего) TODO: смотри `send_message_to_client`
             for user in self.factory.clients:
                 if user is not self:
@@ -79,9 +80,12 @@ class Handler(LineOnlyReceiver):
                     print(f"New user: {login}")
                     # отправляем клиенту приветственное сообщение
                     self.sendLine(f"Welcome, {login}!!!".encode())
-                    # TODO: пометка для ДЗ (задание №2)
                     # записываем логин
                     self.login=login
+
+                    # TODO: пометка для ДЗ (задание №2)
+                    # отправляем новому участнику последние 10 сообщений из чата
+                    self.factory.send_history(login,self)
                 else:
                     # отправим клиенту текст с ошибкой
                     self.sendLine(f"Логин {login} занят, попробуйте другой".encode())
@@ -95,6 +99,7 @@ class Handler(LineOnlyReceiver):
                 self.sendLine("Неверный логин".encode())
 
 
+
 class Server(ServerFactory):
     """
     Класс для работы сервера и создания новых подключений
@@ -102,12 +107,14 @@ class Server(ServerFactory):
 
     protocol = Handler  # тип протокола для подключения
     clients: list  # список активных клиентов
+    stock: list
 
     def __init__(self):
         """
         Конструктор сервера (инициализация пустого списка клиентов)
         """
         self.clients = []
+        self.stock=[]
 
     def startFactory(self):
         """
@@ -125,14 +132,28 @@ class Server(ServerFactory):
         # TODO: сюда можно вынести код со строк 52-55
         pass
 
-    def send_history(self, count=10):
+    def send_history(self, username,user,count=10):
         """
         Метод для отправки истории
         :param count:
         :return:
         """
         # TODO: пометка для ДЗ (задание №2)
-        pass
+        #self.sendLine("стория сообщений".encode())
+        print("отправляем историю новичку ",username)
+        #print (self.stock)
+        #user.sendLine ("история".encode())
+        history_len=len(self.stock)
+        if history_len>count>0:
+            for line in self.stock[-count:]:
+                user.sendLine (line.encode())
+        elif count>0:
+            for line in self.stock[-history_len:]:
+                user.sendLine (line.encode())
+
+
+    # def pop_history(self):
+    #     stock.pop
 
 
 # указание конфигурации реактора (порт и тип сервера)
