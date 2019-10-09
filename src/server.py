@@ -1,6 +1,9 @@
 #  Created by Artem Manchenkov
 #  artyom@manchenkoff.me
 #
+#  Modified by Anna Suvorova
+#  reg.tobit@gmail.com
+#
 #  Copyright © 2019
 #
 #  Сервер для обработки сообщений от клиентов
@@ -25,7 +28,7 @@ class Handler(LineOnlyReceiver):
         :return:
         """
         self.factory.clients.remove(self)  # удаляем клиента из списка подключенных
-        print("Disconnected")  # выводим в терминал сообщение об отключении
+        print("Disconnected"+self.login)  # выводим в терминал сообщение об отключении
 
     def connectionMade(self):
         """
@@ -34,7 +37,7 @@ class Handler(LineOnlyReceiver):
         """
         self.login = None  # сбрасываем логин на начальное (пустое) значение
         self.factory.clients.append(self)  # добавим клиента в список подключенных
-        print("Connected")  # выведем в терминал уведомление о новом подключении
+        print("Connected" + self.login)  # выведем в терминал уведомление о новом подключении
 
     def lineReceived(self, line: bytes):
         """
@@ -42,6 +45,7 @@ class Handler(LineOnlyReceiver):
         :param line:
         :return:
         """
+
         message = line.decode()  # декодируем байты в строку
 
         # если у клиента уже настроен логин (прошел авторизацию)
@@ -57,21 +61,36 @@ class Handler(LineOnlyReceiver):
         else:
             # проверяем, что прислал правильную команду (например - login:admin)
             if message.startswith("login:"):
+
                 # убираем начальную часть
                 login = message.replace("login:", "")
 
-                # записываем логин
-                self.login = login
-
                 # TODO: пометка для ДЗ (задание №1)
+                isUserNameUnique=True
 
-                # выводим уведомление в консоль
-                print(f"New user: {login}")
-                # отправляем клиенту приветственное сообщение
-                self.sendLine("Welcome!!!".encode())
-                # TODO: пометка для ДЗ (задание №2)
-            # если прислал неправильную команду
+                #проверяем уникальность логина
+                for user in self.factory.clients:
+                    print('check',login, user.login)
+                    if user.login==login:isUserNameUnique=False;print('Ununique username',self.login)
+
+                if isUserNameUnique==True:
+                    # выводим уведомление в консоль
+                    print(self.factory.clients)
+                    print(f"New user: {login}")
+                    # отправляем клиенту приветственное сообщение
+                    self.sendLine(f"Welcome, {login}!!!".encode())
+                    # TODO: пометка для ДЗ (задание №2)
+                    # записываем логин
+                    self.login=login
+                else:
+                    # отправим клиенту текст с ошибкой
+                    self.sendLine(f"Логин {login} занят, попробуйте другой".encode())
+                    #разрываем соединение с клиентом
+                    self.factory.clients.reverse()
+
+
             else:
+                # если прислал неправильную команду
                 # отправим клиенту текст с ошибкой
                 self.sendLine("Неверный логин".encode())
 
